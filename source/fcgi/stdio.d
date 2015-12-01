@@ -40,8 +40,7 @@ void write(S...)(S args)
         }
         else static if (isSomeString!A)
         {
-            import std.range.primitives: ElementEncodingType;
-            request.stdout.writeBlock(arg.ptr, arg.length * ElementEncodingType!A.sizeof);
+            request.stdout.writeBlock(arg.ptr, arg.length * typeof(arg[0]).sizeof);
         }
         else static if (isIntegral!A)
         {
