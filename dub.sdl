@@ -1,8 +1,9 @@
 name "fcgid"
-description "FastCGI library for the D language."
+description "Cross-platform FastCGI library for the D language."
 copyright "Copyright © 2015, riki"
 authors "riki"
 targetType "library"
+license "GPL-3.0"
 subPackage {
 	name "echo"
 	version "1.0.0"
