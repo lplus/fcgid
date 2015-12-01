@@ -1,11 +1,9 @@
 module fcgi.app;
 import core.sys.posix.sys.socket;
 import core.sys.posix.unistd;
-import core.stdc.stdio;
 
 import std.stdio;
 import std.traits;
-import std.range.primitives;
 
 Request request;
 

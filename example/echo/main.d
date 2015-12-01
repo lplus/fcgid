@@ -1,7 +1,6 @@
 import std.concurrency;
 import fcgi.stdio;
 
-
 struct A
 {
     int a;
