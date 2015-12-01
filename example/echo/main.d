@@ -5,13 +5,13 @@ import fcgi.stdio;
 struct A
 {
     int a;
-    int b;
+    int x;
     char[] str = ['h', 'e', 'l', 'l', 'o'];
     
     struct B
     {
         bool b = true;
-        bool b = false;
+        bool bf = false;
         uint ui = 123;
         string str = "a string";
     }
