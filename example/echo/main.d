@@ -7,6 +7,14 @@ struct A
     int a;
     int b;
     char[] str = ['h', 'e', 'l', 'l', 'o'];
+    
+    struct B
+    {
+        bool b = true;
+        bool b = false;
+        uint ui = 123;
+        string str = "a string";
+    }
 }
 
 void threadMain(ubyte n)
