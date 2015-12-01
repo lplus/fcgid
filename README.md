@@ -22,4 +22,4 @@ TODO:
 1. add windows version support
 2. add thread example
 3. full protocol implement
-3. show errors
+3. bugs
