@@ -1,0 +1,12 @@
+name "fcgid"
+description "FastCGI library for the D language."
+copyright "Copyright © 2015, riki"
+authors "riki"
+targetType "library"
+subPackage {
+	name "echo"
+	version "1.0.0"
+	targetType "executable"
+	sourcePaths "example/echo"
+	dependency "fcgid" version = "*"
+}
