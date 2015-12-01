@@ -4,6 +4,7 @@ copyright "Copyright © 2015, riki"
 authors "riki"
 targetType "library"
 license "GPL-3.0"
+version "v0.0.1"
 subPackage {
 	name "echo"
 	version "1.0.0"
