@@ -1,19 +1,44 @@
 module fcgi.app;
-import core.sys.posix.sys.socket;
-import core.sys.posix.unistd;
-
+//import core.sys.posix.sys.socket;
+//import core.sys.posix.unistd;
+import std.socket;
 import std.stdio;
 import std.traits;
 
 Request request;
 
+void init()
+{
+	
+	auto family = AddressFamily.INET;
+	version(Posix)
+	{
+		import core.sys.posix.sys.socket;
+		sockaddr_storage ss;
+		socklen_t nameLen = ss.sizeof;
+		if(-1 == getsockname(Protocol.listenfd, cast(sockaddr*)&ss, &nameLen)) {
+			perror("getsockname");
+		}
+		if(ss.ss_family == AF_UNIX) {
+			family = AddressFamily.UNIX;
+			writeln("AF_UNIX");
+		}
+	}
+
+	request.listenSock = new Socket(cast(socket_t)Protocol.listenfd, family);
+}
+
 bool accept()
 {
     synchronized {
-	    request.ipcfd = core.sys.posix.sys.socket.accept(Protocol.listenfd, null, null);
-		if (request.ipcfd < 0) {
-			return false;
+		try {
+			request.ipcSock = request.listenSock.accept();
 		}
+		catch(SocketAcceptException e)
+		{
+			writeln(e);
+		}
+
     }
 
 	request.stdin.fillBuffer();
@@ -26,10 +51,10 @@ void finish()
 	request.stdin.buffer[] = 0;
 	request.stdin.next = 0;
 	request.stdin.stop = 0;
-	.close(request.ipcfd);
+	//.close(request.ipcfd);
+	request.ipcSock.close();
 }
 
-private:
 
 struct Request
 {
@@ -42,9 +67,12 @@ struct Request
 	private:
 	ubyte keepConnection;
 	int role;
-	int ipcfd = 0;
+	Socket ipcSock;
+	static Socket listenSock;
+
 }
 
+private:
 enum bufferMaxLength = 8192;
 struct InputStream
 {
@@ -70,9 +98,10 @@ private:
 	bool fillBuffer()
 	{
 		if (next == stop) {
-			stop = core.sys.posix.unistd.read(request.ipcfd, buffer.ptr, buffer.length);
-    		if (stop == -1) {
-    			perror("fillBuffer: .read");
+			//stop = core.sys.posix.unistd.read(request.ipcfd, buffer.ptr, buffer.length);
+			stop = request.ipcSock.receive(buffer);
+    		if (stop == Socket.ERROR) {
+				writeln("ipcSock.receive ERROR");
     		}
 		}
 		
@@ -256,7 +285,8 @@ struct OutputStream
 	    writeBlock(cast(ubyte*)&endBody, endBody.sizeof);
 	    writeln(buffer[0 .. 8]);
 	    writeln(cast(char[]) buffer[8 .. next]);
-        core.sys.posix.unistd.write(request.ipcfd, buffer.ptr, alignLength);
+        //core.sys.posix.unistd.write(request.ipcfd, buffer.ptr, alignLength);
+		request.ipcSock.send(buffer[0 .. alignLength]);
         buffer[] = 0;
         next = 8;
         begin = 8;

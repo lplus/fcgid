@@ -3,7 +3,7 @@ description "Cross-platform FastCGI library for the D language."
 copyright "Copyright © 2015, riki"
 authors "riki"
 targetType "library"
-license "GPL-3.0"
+license "LGPL-3.0"
 version "v0.0.1"
 subPackage {
 	name "echo"

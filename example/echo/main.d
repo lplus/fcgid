@@ -18,8 +18,11 @@ struct A
 
 void threadMain(ubyte n)
 {
+
+	init();
     while(accept)
     {
+		writeln("after accept");
     	"Content-Type: text/html; charset=UTF-8\r\n"
     	"\r\n"
     	.write;
