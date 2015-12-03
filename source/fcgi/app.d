@@ -23,9 +23,17 @@ void init()
 			family = AddressFamily.UNIX;
 			writeln("AF_UNIX");
 		}
+
+		request.listenSock = new Socket(cast(socket_t)0, family);
 	}
 
-	request.listenSock = new Socket(cast(socket_t)Protocol.listenfd, family);
+	version(Windows)
+	{
+		import core.sys.windows.windows;
+		HANDLE stdinHandle = GetStdHandle(STD_INPUT_HANDLE);
+		request.listenSock = new Socket(cast(socket_t)stdinHandle, AddressFamily.INET);
+	}
+
 }
 
 bool accept()
