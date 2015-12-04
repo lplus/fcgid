@@ -11,6 +11,8 @@ void init()
 {
 	
 	auto family = AddressFamily.INET;
+	//stdout.close();
+	//stdout.open("c:\\Workspace\\xx", "w+");
 	version(Posix)
 	{
 		import core.sys.posix.sys.socket;
@@ -23,7 +25,6 @@ void init()
 			family = AddressFamily.UNIX;
 			writeln("AF_UNIX");
 		}
-
 		request.listenSock = new Socket(cast(socket_t)0, family);
 	}
 
@@ -32,23 +33,40 @@ void init()
 		import core.sys.windows.windows;
 		HANDLE stdinHandle = GetStdHandle(STD_INPUT_HANDLE);
 		request.listenSock = new Socket(cast(socket_t)stdinHandle, AddressFamily.INET);
+		writeln("stdinHandle:", stdinHandle);
+		stdout.flush();
 	}
-
 }
 
 bool accept()
 {
-    synchronized {
-		try {
-			request.ipcSock = request.listenSock.accept();
+	writeln("begin accept");
+	
+	 if (request.ipcSockClosed) {
+		synchronized {
+			try {
+				writeln("do accept");
+				request.ipcSock = request.listenSock.accept();
+				request.ipcSock.blocking(true);
+				writeln("accept end");
+			}
+			catch(SocketAcceptException e)
+			{
+				writeln(e);
+				return false;
+			}
+			request.ipcSockClosed = false;
 		}
-		catch(SocketAcceptException e)
-		{
-			writeln(e);
-		}
-
-    }
-
+		writeln("ipcSock:", request.ipcSock);
+		stdout.flush();
+	 }
+	else {
+		writeln("handle:", request.ipcSock.handle);
+		writeln("not accept");
+		stdout.flush;
+	}
+    
+	stdout.flush;
 	request.stdin.fillBuffer();
 	return true;
 }
@@ -60,7 +78,15 @@ void finish()
 	request.stdin.next = 0;
 	request.stdin.stop = 0;
 	//.close(request.ipcfd);
-	request.ipcSock.close();
+	stdout.flush;
+	if (!request.keepConnection){
+		writeln("close");
+		request.ipcSock.close();
+		request.ipcSockClosed = true;
+	}
+	else {
+		writeln("not close");
+	}
 }
 
 
@@ -76,6 +102,7 @@ struct Request
 	ubyte keepConnection;
 	int role;
 	Socket ipcSock;
+	bool ipcSockClosed = true;
 	static Socket listenSock;
 
 }
@@ -110,10 +137,22 @@ private:
 			stop = request.ipcSock.receive(buffer);
     		if (stop == Socket.ERROR) {
 				writeln("ipcSock.receive ERROR");
+				stdout.flush();
     		}
+			if (stop == 0) {
+				request.ipcSock.close();
+				request.ipcSockClosed = true;
+				return false;
+			}
+			writeln("receive:", stop);
+			stdout.flush();
 		}
 		
+		writeln(buffer[0 .. 16]);
+		writeln(buffer[16 .. 32]);
+		writeln(buffer[0 .. 64]);
 		processProtocol();
+		stdout.flush;
 		return true;
 	}
 
@@ -123,29 +162,34 @@ private:
 	        bool continue_ = false;
 	        // process Header
     		auto header = cast(Protocol.Header*)(buffer.ptr + next);
-    		next += header.sizeof;
+    		next += Protocol.Header.sizeof;
     		
     		int requestId;
     		request.requestId =	(header.requestIdB1 << 8)
     								+ header.requestIdB0;
     		contentLength =	(header.contentLengthB1 << 8)
     						+ header.contentLengthB0;
-    						
+    					
+			writeln("===============================");
+			writeln("requestId:", request.requestId);
     		paddingLength = header.paddingLength;
 			writeln("contentLength: ", contentLength);
 			writeln("paddingLength: ", paddingLength);
-			writeln("===============================");
-    
+			writeln(*header);
+			stdout.flush();
             // process Body
             switch (header.type)
             {
                 case Protocol.requestType.begin:
                     auto body_ = cast(Protocol.BeginRequestBody*)(buffer.ptr + next);
-                    next += body_.sizeof;
+                    next += Protocol.BeginRequestBody.sizeof;
                     request.keepConnection = (body_.flags & Protocol.keepConnection);
                     request.role = (body_.roleB1 << 8) + body_.roleB0;
+					writeln("keepConnection:", request.keepConnection);
+					writeln("role:", request.role);
                     writeln("Request Type: begin");
-                    
+					writeln(*body_);
+                    stdout.flush;
                     break;
                 case Protocol.requestType.Params:
                     writeln("Request Type: Params");
@@ -171,29 +215,30 @@ private:
                         auto value = cast(char[])buffer[next + nameLen .. next + nameLen + valueLen];
                         request.params[name] = value; 
                         next += nameLen + valueLen;
-                        writeln(name, " : ", value);
+                        writeln(name, " #=# ", value);
                     }
                     next += header.paddingLength;
                     writeln("next::", next);
+					stdout.flush;
                     break;                    
                 case Protocol.requestType.Stdin:
                     writeln("Request Type: Stdin");
+					stdout.flush;
                     return;
                 case Protocol.requestType.End:
                     writeln("Request Type: End");
+					stdout.flush;
                     return;
                 default:
                     writeln("Request Type: Unknow", (cast(char*) header)[0 .. 80]);
+					stdout.flush;
                     return;
                 
             }
             
 		} while(true);
-
+		
 	}
-
-
-
 }
 
 struct OutputStream
@@ -250,7 +295,7 @@ struct OutputStream
 	{
 	    
 	    header.version_ = Protocol.version1;
-        header.type             = cast(ubyte) Protocol.requestType.Stdout;
+        header.type             = cast(ubyte) type;
         header.requestIdB1      = cast(ubyte) ((request.requestId     >> 8) & 0xff);
         header.requestIdB0      = cast(ubyte) ((request.requestId         ) & 0xff);
         header.contentLengthB1  = cast(ubyte) ((contentLength >> 8) & 0xff);
@@ -262,14 +307,16 @@ struct OutputStream
 	void flush()
 	{
 	    auto contentLength = (next - 8);
+		
 	    auto alignLength = align8(next);
-	    next = alignLength;
+	    auto paddingLength = alignLength - next;
+		next = alignLength;
 	    auto header = cast(Protocol.Header*)buffer.ptr;
 	    makeHeader(
 	        header, 
 	        Protocol.requestType.Stdout, 
 	        contentLength,
-	        cast(ubyte)(alignLength - contentLength)
+	        cast(ubyte)paddingLength
         );
 	    
 	    Protocol.Header endHeader;
@@ -277,7 +324,7 @@ struct OutputStream
 	        &endHeader, 
 	        Protocol.requestType.End, 
 	        Protocol.EndRequestBody.sizeof, 
-	        cast(ubyte)(alignLength - contentLength)
+	        cast(ubyte)0
         );
 	    
         Protocol.EndRequestBody endBody;
@@ -294,10 +341,12 @@ struct OutputStream
 	    writeln(buffer[0 .. 8]);
 	    writeln(cast(char[]) buffer[8 .. next]);
         //core.sys.posix.unistd.write(request.ipcfd, buffer.ptr, alignLength);
-		request.ipcSock.send(buffer[0 .. alignLength]);
+		writeln(buffer[next - 16 .. next]);
+		request.ipcSock.send(buffer[0 .. next]);
         buffer[] = 0;
         next = 8;
         begin = 8;
+		stdout.flush;
 	}
 	
 	void setStdoutHeader();
@@ -396,6 +445,4 @@ struct Protocol
 		UnknownTypeBody body_;
 	}
 }
-
-
 
