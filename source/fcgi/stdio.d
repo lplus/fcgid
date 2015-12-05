@@ -30,7 +30,6 @@ void writef(S...)(in char[] fmt, S args)
 void write(S...)(S args)
 {
     import std.traits : isBoolean, isIntegral, isAggregateType, isSomeString, isSomeChar;
-    import std.stdio:writeln;
     foreach (arg; args)
     {
         alias A = typeof(arg);
@@ -49,7 +48,6 @@ void write(S...)(S args)
         }
         else static if (isBoolean!A)
         {
-            writeln("isBoolean");
             arg ?
             request.stdout.writeBlock("true".ptr, 4):
             request.stdout.writeBlock("false".ptr, 5);

@@ -38,6 +38,7 @@ void threadMain(ubyte n)
     	
         writeln("<pre>");
         writeln("thread:", n);
+		writeln("RequestID:", request.requestId);
     	writeln(request.params["SCRIPT_NAME"]);
     	foreach(name, value; request.params)
     	{
@@ -63,7 +64,7 @@ void threadMain(ubyte n)
 
 void main() 
 {
-    for (ubyte i=0; i<128; i++) {
+    for (ubyte i=0; i<8; i++) {
         spawn(&threadMain, i);
     }
 }

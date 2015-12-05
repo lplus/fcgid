@@ -1,18 +1,21 @@
 module fcgi.app;
-//import core.sys.posix.sys.socket;
-//import core.sys.posix.unistd;
 import std.socket;
 import std.stdio;
 import std.traits;
-
+import std.stdio;
 Request request;
+
+private void log(T...)(T args) {
+	if (stdout.isOpen) {
+		stdout.writeln(args);
+	}
+}
 
 void init()
 {
+	log ("FastCGI Start ...");
 	
 	auto family = AddressFamily.INET;
-	//stdout.close();
-	stdout.open("c:\\Workspace\\xx", "w+");
 	version(Posix)
 	{
 		import core.sys.posix.sys.socket;
@@ -22,10 +25,14 @@ void init()
 			perror("getsockname");
 		}
 		if(ss.ss_family == AF_UNIX) {
+			log ("accept from AF_UNIX");
 			family = AddressFamily.UNIX;
-			writeln("AF_UNIX");
+		}
+		else {
+			log ("accept from AF_INET");
 		}
 		request.listenSock = new Socket(cast(socket_t)0, family);
+
 	}
 
 	version(Windows)
@@ -33,35 +40,26 @@ void init()
 		import core.sys.windows.windows;
 		HANDLE stdinHandle = GetStdHandle(STD_INPUT_HANDLE);
 		request.listenSock = new Socket(cast(socket_t)stdinHandle, AddressFamily.INET);
-		writeln("stdinHandle:", stdinHandle);
 		stdout.flush();
 	}
 }
 
 bool accept()
 {
-	writeln("begin accept");
-	
 	 if (request.ipcSockClosed) {
 		synchronized {
 			try {
-				writeln("do accept");
 				request.ipcSock = request.listenSock.accept();
-				writeln("accept end");
 			}
 			catch(SocketAcceptException e)
 			{
-				writeln(e);
 				return false;
 			}
 			request.ipcSockClosed = false;
 		}
-		writeln("ipcSock:", request.ipcSock);
 		stdout.flush();
 	 }
 	else {
-		writeln("handle:", request.ipcSock.handle);
-		writeln("not accept");
 		stdout.flush;
 	}
     
@@ -81,10 +79,8 @@ void finish()
 	//.close(request.ipcfd);
 	stdout.flush;
 	if (request.keepConnection){
-		writeln("not close");
 		return;
 	}
-	writeln("close");
 	request.ipcSock.close();
 	request.ipcSockClosed = true;
 }
@@ -115,6 +111,7 @@ struct InputStream
 	{
 		if (next == contentStop) {
 			fillBuffer;
+			processProtocol;
 		}
 		
 		import std.algorithm.comparison:min;
@@ -152,8 +149,7 @@ private:
 		if (next == bufferStop) {
 			auto readn= request.ipcSock.receive(buffer[next .. $]);
     		if (readn == Socket.ERROR) {
-				writeln("ipcSock.receive ERROR");
-				stdout.flush();
+				return false;
     		}
 			if (readn == 0) {
 				request.ipcSock.close();
@@ -162,15 +158,9 @@ private:
 			}
 			bufferStop += readn;
 
-			writeln("receive:", readn);
 			stdout.flush();
 		}
 		
-		writeln(buffer[0 .. 16]);
-		writeln(buffer[16 .. 32]);
-		writeln(buffer[0 .. 64]);
-		//processProtocol();
-		stdout.flush;
 		return true;
 	}
 	
@@ -190,13 +180,7 @@ private:
     						+ header.contentLengthB0;
     					
 			contentStop = next + contentLength;
-			writeln("===============================");
-			writeln("requestId:", request.requestId);
     		paddingLength = header.paddingLength;
-			writeln("contentLength: ", contentLength);
-			writeln("paddingLength: ", paddingLength);
-			writeln(*header);
-			stdout.flush();
             // process Body
             switch (header.type)
             {
@@ -217,14 +201,9 @@ private:
 					else {
 						request.params["FCGI_ROLE"] = "UNKNOW".dup;
 					}
-					writeln("keepConnection:", request.keepConnection);
-					writeln("role:", request.role);
-                    writeln("Request Type: begin");
-					writeln(*body_);
                     stdout.flush;
                     break;
                 case Protocol.requestType.Params:
-                    writeln("Request Type: Params");
                     // TODO: read params
                     size_t nameLen, valueLen;
                     auto begin = next;
@@ -247,27 +226,17 @@ private:
                         auto value = cast(char[])buffer[next + nameLen .. next + nameLen + valueLen];
                         request.params[name] = value; 
                         next += nameLen + valueLen;
-                        writeln(name, " #=# ", value);
-						if (name == "CONTENT_LENGTH") {
-							writeln("valueLen:", valueLen);
-							writeln("value:", value);
-							writeln("valueSize", value.length);
-						}
                     }
                     next += header.paddingLength;
-                    writeln("next::", next);
 					stdout.flush;
                     return;                  
                 case Protocol.requestType.Stdin:
-                    writeln("Request Type: Stdin");
 					stdout.flush;
                     return;
                 case Protocol.requestType.End:
-                    writeln("Request Type: End");
 					stdout.flush;
                     return;
                 default:
-                    writeln("Request Type: Unknow", (cast(char*) header)[0 .. 80]);
 					stdout.flush;
                     return;
                 
@@ -375,10 +344,7 @@ struct OutputStream
         next = alignLength;
 	    writeBlock(cast(ubyte*)&endHeader, endHeader.sizeof);
 	    writeBlock(cast(ubyte*)&endBody, endBody.sizeof);
-	    writeln(buffer[0 .. 8]);
-	    writeln(cast(char[]) buffer[8 .. next]);
         //core.sys.posix.unistd.write(request.ipcfd, buffer.ptr, alignLength);
-		writeln(buffer[next - 16 .. next]);
 		request.ipcSock.send(buffer[0 .. next]);
         buffer[] = 0;
         next = 8;
