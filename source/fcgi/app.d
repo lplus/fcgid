@@ -202,6 +202,18 @@ private:
                     next += Protocol.BeginRequestBody.sizeof;
                     request.keepConnection = (body_.flags & Protocol.keepConnection);
                     request.role = (body_.roleB1 << 8) + body_.roleB0;
+					if (request.role == Protocol.role.responder) {
+						request.params["FCGI_ROLE"] = "RESPONDER".dup;
+					}
+					else if (request.role == Protocol.role.authorizer) {
+						request.params["FCGI_ROLE"] = "AUTHORIZER".dup;
+					}
+					else if (request.role == Protocol.role.filter) {
+						request.params["FCGI_ROLE"] = "FILTER".dup;
+					}
+					else {
+						request.params["FCGI_ROLE"] = "UNKNOW".dup;
+					}
 					writeln("keepConnection:", request.keepConnection);
 					writeln("role:", request.role);
                     writeln("Request Type: begin");
@@ -233,11 +245,16 @@ private:
                         request.params[name] = value; 
                         next += nameLen + valueLen;
                         writeln(name, " #=# ", value);
+						if (name == "CONTENT_LENGTH") {
+							writeln("valueLen:", valueLen);
+							writeln("value:", value);
+							writeln("valueSize", value.length);
+						}
                     }
                     next += header.paddingLength;
                     writeln("next::", next);
 					stdout.flush;
-                    break;                    
+                    return;                  
                 case Protocol.requestType.Stdin:
                     writeln("Request Type: Stdin");
 					stdout.flush;
