@@ -76,17 +76,17 @@ void finish()
 	request.stdout.flush();
 	request.stdin.buffer[] = 0;
 	request.stdin.next = 0;
-	request.stdin.stop = 0;
+	request.stdin.bufferStop = 0;
+	request.stdin.contentStop = 0;
 	//.close(request.ipcfd);
 	stdout.flush;
-	if (!request.keepConnection){
-		writeln("close");
-		request.ipcSock.close();
-		request.ipcSockClosed = true;
-	}
-	else {
+	if (request.keepConnection){
 		writeln("not close");
+		return;
 	}
+	writeln("close");
+	request.ipcSock.close();
+	request.ipcSockClosed = true;
 }
 
 
@@ -113,13 +113,28 @@ struct InputStream
 {
 	size_t read(void* ptr, size_t length)
 	{
-	    ptr[0 .. length] = buffer[next .. length];
-		return 0;
+		if (next == contentStop) {
+			fillBuffer;
+		}
+		
+		import std.algorithm.comparison:min;
+		auto len = min(length, contentStop - next);
+	    ptr[0 .. len] = buffer[next .. len + next];
+		return len;
 	}
 	
 	size_t read(void[] buf)
 	{
 	    return read(buf.ptr, buf.length);
+	}
+
+	char read()
+	{
+		if (next == contentStop) {
+			fillBuffer;
+		}
+
+		return cast(char)buffer[next++];
 	}
 	
 private:
@@ -129,22 +144,25 @@ private:
 	ubyte	paddingLength;
 	size_t	next;
 	size_t	stop;
+	size_t	contentStop;
+	size_t	bufferStop;
 
 	bool fillBuffer()
 	{
-		if (next == stop) {
-			//stop = core.sys.posix.unistd.read(request.ipcfd, buffer.ptr, buffer.length);
-			stop = request.ipcSock.receive(buffer);
-    		if (stop == Socket.ERROR) {
+		if (next == bufferStop) {
+			auto readn= request.ipcSock.receive(buffer);
+    		if (readn == Socket.ERROR) {
 				writeln("ipcSock.receive ERROR");
 				stdout.flush();
     		}
-			if (stop == 0) {
+			if (readn == 0) {
 				request.ipcSock.close();
 				request.ipcSockClosed = true;
 				return false;
 			}
-			writeln("receive:", stop);
+			bufferStop += readn;
+
+			writeln("receive:", readn);
 			stdout.flush();
 		}
 		
@@ -155,21 +173,20 @@ private:
 		stdout.flush;
 		return true;
 	}
-
+	
 	void processProtocol()
 	{
 	    do {
-	        bool continue_ = false;
 	        // process Header
     		auto header = cast(Protocol.Header*)(buffer.ptr + next);
     		next += Protocol.Header.sizeof;
     		
-    		int requestId;
     		request.requestId =	(header.requestIdB1 << 8)
     								+ header.requestIdB0;
     		contentLength =	(header.contentLengthB1 << 8)
     						+ header.contentLengthB0;
     					
+			contentStop = next + contentLength;
 			writeln("===============================");
 			writeln("requestId:", request.requestId);
     		paddingLength = header.paddingLength;
@@ -196,7 +213,7 @@ private:
                     // TODO: read params
                     size_t nameLen, valueLen;
                     auto begin = next;
-                    while(next - begin < contentLength) {
+                    while(next < contentStop) {
                         nameLen = ((buffer[next] & 0x80) != 0) ?
                             ((buffer[next++] & 0x7f) << 24) 
                             + (buffer[next++] << 16) 
