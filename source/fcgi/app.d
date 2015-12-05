@@ -12,7 +12,7 @@ void init()
 	
 	auto family = AddressFamily.INET;
 	//stdout.close();
-	//stdout.open("c:\\Workspace\\xx", "w+");
+	stdout.open("c:\\Workspace\\xx", "w+");
 	version(Posix)
 	{
 		import core.sys.posix.sys.socket;
@@ -47,7 +47,6 @@ bool accept()
 			try {
 				writeln("do accept");
 				request.ipcSock = request.listenSock.accept();
-				request.ipcSock.blocking(true);
 				writeln("accept end");
 			}
 			catch(SocketAcceptException e)
@@ -68,6 +67,7 @@ bool accept()
     
 	stdout.flush;
 	request.stdin.fillBuffer();
+	request.stdin.processProtocol;
 	return true;
 }
 
@@ -150,7 +150,7 @@ private:
 	bool fillBuffer()
 	{
 		if (next == bufferStop) {
-			auto readn= request.ipcSock.receive(buffer);
+			auto readn= request.ipcSock.receive(buffer[next .. $]);
     		if (readn == Socket.ERROR) {
 				writeln("ipcSock.receive ERROR");
 				stdout.flush();
@@ -169,7 +169,7 @@ private:
 		writeln(buffer[0 .. 16]);
 		writeln(buffer[16 .. 32]);
 		writeln(buffer[0 .. 64]);
-		processProtocol();
+		//processProtocol();
 		stdout.flush;
 		return true;
 	}
@@ -178,6 +178,9 @@ private:
 	{
 	    do {
 	        // process Header
+			if (next == contentStop) {
+				fillBuffer;
+			}
     		auto header = cast(Protocol.Header*)(buffer.ptr + next);
     		next += Protocol.Header.sizeof;
     		
