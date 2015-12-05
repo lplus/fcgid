@@ -19,7 +19,6 @@ spawn-fcgi -p[port] ./fcgid_echo
 
 TODO:
 -----------------
-1. add windows version support
-2. add thread example
-3. full protocol implement
+1. add thread example
+2. full protocol implement
 3. bugs
