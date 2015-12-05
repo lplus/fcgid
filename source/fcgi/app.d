@@ -5,16 +5,9 @@ import std.traits;
 import std.stdio;
 Request request;
 
-private void log(T...)(T args) {
-	if (stdout.isOpen) {
-		stdout.writeln(args);
-	}
-}
 
 void init()
 {
-	log ("FastCGI Start ...");
-	
 	auto family = AddressFamily.INET;
 	version(Posix)
 	{
@@ -25,11 +18,9 @@ void init()
 			perror("getsockname");
 		}
 		if(ss.ss_family == AF_UNIX) {
-			log ("accept from AF_UNIX");
 			family = AddressFamily.UNIX;
 		}
 		else {
-			log ("accept from AF_INET");
 		}
 		request.listenSock = new Socket(cast(socket_t)0, family);
 
@@ -40,7 +31,6 @@ void init()
 		import core.sys.windows.windows;
 		HANDLE stdinHandle = GetStdHandle(STD_INPUT_HANDLE);
 		request.listenSock = new Socket(cast(socket_t)stdinHandle, AddressFamily.INET);
-		stdout.flush();
 	}
 }
 
@@ -57,13 +47,10 @@ bool accept()
 			}
 			request.ipcSockClosed = false;
 		}
-		stdout.flush();
 	 }
 	else {
-		stdout.flush;
 	}
     
-	stdout.flush;
 	request.stdin.fillBuffer();
 	request.stdin.processProtocol;
 	return true;
@@ -77,7 +64,6 @@ void finish()
 	request.stdin.bufferStop = 0;
 	request.stdin.contentStop = 0;
 	//.close(request.ipcfd);
-	stdout.flush;
 	if (request.keepConnection){
 		return;
 	}
@@ -158,7 +144,6 @@ private:
 			}
 			bufferStop += readn;
 
-			stdout.flush();
 		}
 		
 		return true;
@@ -201,7 +186,6 @@ private:
 					else {
 						request.params["FCGI_ROLE"] = "UNKNOW".dup;
 					}
-                    stdout.flush;
                     break;
                 case Protocol.requestType.Params:
                     // TODO: read params
@@ -231,13 +215,10 @@ private:
 					stdout.flush;
                     return;                  
                 case Protocol.requestType.Stdin:
-					stdout.flush;
                     return;
                 case Protocol.requestType.End:
-					stdout.flush;
                     return;
                 default:
-					stdout.flush;
                     return;
                 
             }
@@ -349,7 +330,6 @@ struct OutputStream
         buffer[] = 0;
         next = 8;
         begin = 8;
-		stdout.flush;
 	}
 	
 	void setStdoutHeader();
