@@ -12,3 +12,11 @@ subPackage {
 	sourcePaths "example/echo"
 	dependency "fcgid" version = "*"
 }
+subPackage {
+	name "hello"
+	version "1.0.0"
+	targetType "executable"
+	sourcePaths "example/hello"
+	dependency "fcgid" version = "*"
+	buildType "releaseMode"
+}

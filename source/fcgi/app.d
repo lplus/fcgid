@@ -1,10 +1,16 @@
+// Written in the D programming language.
+
+/**
+
+  */
 module fcgi.app;
 import std.socket;
 import std.stdio;
 import std.traits;
 import std.stdio;
-Request request;
 
+
+Request request;
 
 void init()
 {
@@ -90,7 +96,9 @@ struct Request
 }
 
 private:
+
 enum bufferMaxLength = 8192;
+
 struct InputStream
 {
 	size_t read(void* ptr, size_t length)
@@ -100,8 +108,9 @@ struct InputStream
 			processProtocol;
 		}
 
-		import std.algorithm.comparison:min;
-		auto len = min(length, contentStop - next);
+		//import std.algorithm.comparison:min;
+		auto realLen = contentStop - next;
+		auto len = length < realLen ? length : realLen;
 		ptr[0 .. len] = buffer[next .. len + next];
 		return len;
 	}
