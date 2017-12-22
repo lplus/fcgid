@@ -3,7 +3,7 @@ import fcgi.stdio;
 
 void main() 
 {
-	init();
+    init();
     while(accept)
     {
     	"Content-Type: text/html; charset=UTF-8\r\n"
