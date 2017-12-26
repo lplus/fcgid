@@ -28,6 +28,5 @@ spawn-fcgi -p9001 ./fcgid_echo
 
 TODO:
 -----------------
-1. add thread example
-2. full protocol implement
-3. bugs
+1. full protocol implement
+2. bugs

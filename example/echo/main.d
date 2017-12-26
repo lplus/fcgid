@@ -1,3 +1,6 @@
+/**
+  * multiple thread example
+  */
 import std.concurrency;
 import fcgi.stdio;
 
@@ -28,24 +31,27 @@ void threadMain(ubyte n)
 		string x = `sdf
 		aaa`;
     	
-    	`<html>\n
-    	<head>\n 
-    	<title>Title: Simple FastCGI Loop</title>\n
-    	</head>\n
-    	<body>\n
-    	<h1>FastCGI in D</h1>\n
-    	<h2>中文内容</h2>\n`
+    	`<html>
+    	<head> 
+    	<title>Title: Simple FastCGI Loop</title>
+    	</head>
+    	<body>
+    	<h1>FastCGI in D</h1>
+    	<h2>多线程例子</h2>`
 		.write;
     	
         writeln("<pre>");
-        writeln("thread:", n);
+        writefln("<B>线程号:%s</B>", n);
 		writeln("RequestID:", request.requestId);
-    	writeln(request.params["SCRIPT_NAME"]);
-    	foreach(name, value; request.params)
-    	{
+		writeln("<hr>");
+
+		writeln("遍历参数:");
+    	foreach(name, value; request.params) {
     	    writeln(name ~" : " ~ value);
     	}
+		writeln("<hr>");
     	
+		writeln("其它测试");
     	writeln("test writeln");
     	writef("the number is %d %s",  100, ".");
     	writeln(true);
@@ -55,9 +61,10 @@ void threadMain(ubyte n)
         writefln("wstring %s", "是要工"w);
     	writeln("xxxxxxxxxx");
         writeln("</pre>");
-    	`</body>\n
-    	</html>\n`
+    	`</body>
+    	</html>`
     	.write;
+		writeln("<hr>");
     	
     	finish;
     }
