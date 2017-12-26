@@ -23,18 +23,19 @@ void threadMain(ubyte n)
     while(accept)
     {
 		writeln("after accept");
-    	"Content-Type: text/html; charset=UTF-8\r\n"
-    	"\r\n"
-    	.write;
+    	write("Content-Type: text/html; charset=UTF-8\r\n\r\n");
+
+		string x = `sdf
+		aaa`;
     	
-    	"<html>\n"
-    	"<head>\n"
-    	"<title>Title: Simple FastCGI Loop</title>\n"
-    	"</head>\n"
-    	"<body>\n"
-    	"<h1>FastCGI in D</h1>\n"
-    	"<h2>中文内容</h2>\n"
-    	.write;
+    	`<html>\n
+    	<head>\n 
+    	<title>Title: Simple FastCGI Loop</title>\n
+    	</head>\n
+    	<body>\n
+    	<h1>FastCGI in D</h1>\n
+    	<h2>中文内容</h2>\n`
+		.write;
     	
         writeln("<pre>");
         writeln("thread:", n);
@@ -54,8 +55,8 @@ void threadMain(ubyte n)
         writefln("wstring %s", "是要工"w);
     	writeln("xxxxxxxxxx");
         writeln("</pre>");
-    	"</body>\n"
-    	"</html>\n"
+    	`</body>\n
+    	</html>\n`
     	.write;
     	
     	finish;
