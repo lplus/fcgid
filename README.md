@@ -12,10 +12,19 @@ $ dub build
 $ dub build fcgid:echo 
 ```
 
+* nginx config
+```shell
+location / {
+	include fastcgi_params;
+	fastcgi_pass 127.0.0.1:9001;
+}
+```
+
 * use spawn-fcgi to run example
 ```shell
-spawn-fcgi -p[port] ./fcgid_echo
+spawn-fcgi -p9001 ./fcgid_echo
 ```
+
 
 TODO:
 -----------------
