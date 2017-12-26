@@ -241,7 +241,7 @@ struct OutputStream
 {
 
 
-	this(size_t bufferLength = bufferMaxLength)
+	this(size_t bufferLength)
 	{
 		buffer = new ubyte[bufferLength];
 	}
