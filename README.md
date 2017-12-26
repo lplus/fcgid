@@ -9,6 +9,7 @@ $ dub build
 
 * to build the example echo
 ```shell
+$ dub build fcgid:hello
 $ dub build fcgid:echo 
 ```
 
@@ -20,11 +21,15 @@ location / {
 }
 ```
 
-* use spawn-fcgi to run example
+* use spawn-fcgi tu run example hello
+```
+spawn-fcgi -p9001 ./fcgid_hello
+```
+
+* use spawn-fcgi to run example multiple thread echo
 ```shell
 spawn-fcgi -p9001 ./fcgid_echo
 ```
-
 
 TODO:
 -----------------
